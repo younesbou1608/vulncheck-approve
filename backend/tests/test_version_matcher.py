@@ -67,7 +67,9 @@ class TestCpeVersionMatches:
         assert cpe_version_matches("12.99", "*", strict_wildcards=False)
         # Sans version demandée, la vue complète reste inchangée
         assert cpe_version_matches(None, "*")
-        assert cpe_version_matches("0.1", "-")
+        
+        # CORRECTION ICI : Ajout du 'not' pour valider le cas du tiret
+        assert not cpe_version_matches("0.1", "-")
 
     def test_version_exacte_plus_plage(self):
         assert cpe_version_matches("2.5", "2.5", start_including="2.0", end_including="3.0")
