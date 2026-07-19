@@ -1,0 +1,8 @@
+requests==2.31.0
+psycopg2-binary==2.9.9
+# Airflow 2.9 impose SQLAlchemy < 2.0 (déjà présent dans l'image) : on borne
+# explicitement pour éviter qu'une montée de version casse le scheduler.
+# Les DAGs utilisent l'API « style 2.0 », disponible depuis la 1.4.
+SQLAlchemy>=1.4.36,<2.0
+# pandas est fourni par l'image apache/airflow ; déclaré ici par hygiène.
+pandas

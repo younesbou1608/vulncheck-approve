@@ -1,0 +1,26 @@
+# Sources de données provisionnées automatiquement au démarrage de Grafana
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: vulncheck-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  # Accès SQL direct pour les panneaux métier (verdicts, historique)
+  - name: VulnCheck PostgreSQL
+    uid: vulncheck-postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: ${POSTGRES_DB}
+    user: ${POSTGRES_USER}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+    editable: true

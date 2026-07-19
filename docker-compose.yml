@@ -1,0 +1,144 @@
+# =========================================================
+# VulnCheck & Approve - Stack complète (Sprints 1 à 4)
+#   postgres  : PostgreSQL 16 + pgvector (image pgvector, compatible
+#               avec le volume du Sprint 1 - même base PG16)
+#   airflow   : orchestration des pipelines NVD / KEV / EPSS / embeddings
+#   api       : backend FastAPI (matching, scoring ML, décision, LLM)
+#   frontend  : interface React servie par nginx (proxy /api -> api)
+#   prometheus + grafana + postgres-exporter : monitoring
+# =========================================================
+name: vulncheck2
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: vulncheck2_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Les scripts ne s'exécutent qu'au PREMIER démarrage du volume.
+      # Migration d'une base Sprint 1 existante : ./scripts/apply_migrations.sh
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow:
+    build: ./airflow
+    container_name: vulncheck2_airflow
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      NVD_API_KEY: ${NVD_API_KEY}
+      APP_DB_HOST: postgres
+      APP_DB_PORT: 5432
+      APP_DB_NAME: ${POSTGRES_DB}
+      APP_DB_USER: ${POSTGRES_USER}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      API_BASE_URL: http://api:8000
+    ports:
+      - "${AIRFLOW_PORT}:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_home:/opt/airflow
+    command: standalone
+
+  api:
+    build: ./backend
+    container_name: vulncheck2_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_DB_HOST: postgres
+      APP_DB_PORT: 5432
+      APP_DB_NAME: ${POSTGRES_DB}
+      APP_DB_USER: ${POSTGRES_USER}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SEMANTIC_ENABLED: ${SEMANTIC_ENABLED}
+      STRICT_WILDCARD_FILTER: ${STRICT_WILDCARD_FILTER}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${API_PORT}:8000"
+    volumes:
+      # Persistance de l'artefact ML et du cache HuggingFace entre rebuilds
+      - api_data:/data
+      - ml_artifacts:/srv/vulncheck/app/ml/artifacts
+
+  frontend:
+    build: ./frontend
+    container_name: vulncheck2_frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT}:80"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: vulncheck2_prometheus
+    restart: unless-stopped
+    depends_on:
+      - api
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: vulncheck2_postgres_exporter
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: vulncheck2_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Variables utilisées par provisioning/datasources/datasources.yml
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  pgdata:
+  airflow_home:
+  api_data:
+  ml_artifacts:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,25 @@
+# --- API ---
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+
+# --- Base de données (SQLAlchemy 2.0, driver psycopg2, types pgvector) ---
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.9
+pgvector==0.3.6
+
+# --- Machine Learning (scoring de risque) ---
+scikit-learn==1.5.2
+joblib==1.4.2
+numpy==1.26.4
+
+# --- Matching sémantique (embeddings, pgvector) ---
+# Installé avec les roues CPU PyTorch (voir Dockerfile) pour rester léger.
+sentence-transformers==3.3.1
+
+# --- Explication en langage naturel (LLM Claude, rôle narratif) ---
+anthropic==0.42.0
+
+# --- Monitoring ---
+prometheus-fastapi-instrumentator==7.0.0
+prometheus-client==0.21.1

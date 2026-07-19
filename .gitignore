@@ -1,0 +1,17 @@
+# Environnements et secrets
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+scripts/.backfill_checkpoint.json
+backend/app/ml/artifacts/*.joblib
+
+# Node / build frontend
+frontend/node_modules/
+frontend/dist/
+
+# Données locales
+*.log

@@ -1,0 +1,24 @@
+# =========================================================
+# VulnCheck & Approve - Configuration Prometheus (Sprint 4)
+# =========================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # API FastAPI : métriques HTTP (instrumentator) + métriques métier
+  # (verdicts, confiance de matching, jauges pipeline NVD/KEV/EPSS)
+  - job_name: vulncheck_api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+
+  # PostgreSQL via postgres-exporter (connexions, transactions, taille)
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Prometheus lui-même
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

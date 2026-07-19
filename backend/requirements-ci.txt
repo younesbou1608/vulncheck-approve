@@ -1,0 +1,16 @@
+# Dépendances CI : identiques à requirements.txt SANS sentence-transformers
+# (roues PyTorch ~2 Go, inutiles pour compiler et tester la logique pure).
+# En CI, SEMANTIC_ENABLED n'est pas exercé par les tests unitaires.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.9
+pgvector==0.3.6
+scikit-learn==1.5.2
+joblib==1.4.2
+numpy==1.26.4
+anthropic==0.42.0
+prometheus-fastapi-instrumentator==7.0.0
+prometheus-client==0.21.1
+pytest==8.3.4

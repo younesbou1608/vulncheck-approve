@@ -1,0 +1,145 @@
+{
+  "uid": "vulncheck-overview",
+  "title": "VulnCheck - Vue d'ensemble",
+  "description": "Métriques métier : verdicts, qualité du matching, volumes des pipelines NVD/KEV/EPSS.",
+  "tags": ["vulncheck", "metier"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "CVE en base (NVD)",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [{ "expr": "vulncheck_cves_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Entrées CISA KEV",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [{ "expr": "vulncheck_kev_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Scores EPSS",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [{ "expr": "vulncheck_epss_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Embeddings produits",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [{ "expr": "vulncheck_product_embeddings_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Validations archivées",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [{ "expr": "vulncheck_validations_stored_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Taux de refus (24h)",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [
+        {
+          "expr": "100 * sum(increase(vulncheck_validations_total{verdict=\"REFUSE\"}[24h])) / clamp_min(sum(increase(vulncheck_validations_total[24h])), 1)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 20 }, { "color": "red", "value": 50 } ] } }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Validations par verdict (débit)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [
+        { "expr": "sum by (verdict) (increase(vulncheck_validations_total[$__rate_interval]))", "legendFormat": "{{verdict}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "VALIDE" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "A_VERIFIER" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "REFUSE" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "type": "heatmap",
+      "title": "Distribution des scores de confiance de matching",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [
+        { "expr": "sum by (le) (increase(vulncheck_match_confidence_bucket[$__rate_interval]))", "format": "heatmap", "legendFormat": "{{le}}", "refId": "A" }
+      ],
+      "options": { "calculate": false },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Latence de traitement d'une validation (p50 / p95)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(vulncheck_validation_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(vulncheck_validation_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p95", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Fraîcheur des synchronisations (âge de la dernière ingestion)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "vulncheck-prometheus" },
+      "targets": [
+        { "expr": "vulncheck_cve_sync_age_seconds", "legendFormat": "NVD", "refId": "A" },
+        { "expr": "vulncheck_kev_sync_age_seconds", "legendFormat": "CISA KEV", "refId": "B" },
+        { "expr": "vulncheck_epss_sync_age_seconds", "legendFormat": "EPSS", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 93600 }, { "color": "red", "value": 180000 } ] } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Dernières validations (base de données)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "postgres", "uid": "vulncheck-postgres" },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT created_at AS \"date\", software_name AS \"logiciel\", software_version AS \"version\", matched_product AS \"produit\", match_method AS \"methode\", match_confidence AS \"confiance\", risk_score AS \"risque\", cve_count AS \"cve\", kev_count AS \"kev\", verdict FROM validations ORDER BY created_at DESC LIMIT 30;",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    }
+  ]
+}
